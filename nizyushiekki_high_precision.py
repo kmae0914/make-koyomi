@@ -133,8 +133,11 @@ class HighPrecisionCalculator:
 
     def _is_target_year(self, dt, year):
         """指定された年に属する日付かどうかを判定"""
+        # 小寒（285度）と大寒（300度）は1月でも当年の節気として扱う
+        if dt.month == 1 and hasattr(self, '_current_longitude') and self._current_longitude in [285, 300]:
+            return dt.year == year
         # 1月の場合は前年の結果として扱う
-        if dt.month == 1:
+        elif dt.month == 1:
             return dt.year == year + 1
         # 12月の場合は当年の結果として扱う
         elif dt.month == 12:
@@ -159,6 +162,9 @@ class HighPrecisionCalculator:
         
         for sekki in SEKKI_DEFINITIONS:
             try:
+                # 現在の黄経を保存（_is_target_yearで使用）
+                self._current_longitude = sekki.longitude
+                
                 # 二分二至の場合は既知の日付を使用
                 if sekki.longitude in major_dates:
                     dates = [major_dates[sekki.longitude]]
@@ -195,6 +201,11 @@ class HighPrecisionCalculator:
             except Exception as e:
                 print(f"\nエラー: {sekki.name} ({sekki.longitude}°) の計算中に問題が発生")
                 print(f"詳細: {str(e)}")
+            
+            finally:
+                # 現在の黄経をクリア
+                if hasattr(self, '_current_longitude'):
+                    delattr(self, '_current_longitude')
         
         # 結果を日付順にソート
         sorted_results = sorted(results, key=lambda x: x.date)
