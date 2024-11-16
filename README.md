@@ -8,3 +8,9 @@
 
 # 最終目標定義の手がかり
 - target referenceファイルの画像
+
+# 使っているライブラリskyfieldのドキュメント
+- https://rhodesmill.org/skyfield/toc.html
+
+# skyfieldのドキュメントをknowledgeに入れたClaude Project
+- https://claude.ai/project/705ab4ce-67b2-4f94-84ef-4c948e65aff1
