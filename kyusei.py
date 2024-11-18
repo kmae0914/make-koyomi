@@ -44,11 +44,11 @@ def calculate_kusei(year):
     return (result, kusei_names[result])
 
 # 使用例
-def test_kusei():
-    test_years = [2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025]
-    for year in test_years:
-        number, name = calculate_kusei(year)
-        print(f"{year}年: {name}（{number}番）")
+# def test_kusei():
+#     test_years = [2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025]
+#     for year in test_years:
+#         number, name = calculate_kusei(year)
+#         print(f"{year}年: {name}（{number}番）")
 
-if __name__ == "__main__":
-    test_kusei()
+# if __name__ == "__main__":
+#     test_kusei()

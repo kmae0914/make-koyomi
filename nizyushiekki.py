@@ -61,8 +61,8 @@ class SolarTermsCalculator:
         print(f"節気データを {filename} に出力しました。")
 
 # 使用例
-if __name__ == "__main__":
-    calculator = SolarTermsCalculator()
+# if __name__ == "__main__":
+#     calculator = SolarTermsCalculator()
     
-    # 2024年から2033年の節気をExcelファイルとして出力
-    calculator.export_to_excel(2024, 2033, 'solar_terms_2024_2033.xlsx')
+#     # 2024年から2033年の節気をExcelファイルとして出力
+#     calculator.export_to_excel(2024, 2033, 'solar_terms_2024_2033.xlsx')

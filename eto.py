@@ -55,15 +55,15 @@ def print_eto_range(start_year, end_year):
         print(f"{year}  {reiwa_str:6}  {eto:4}  {jikkan:10}  {junishi}")
 
 # 使用例
-if __name__ == "__main__":
-    # 2024年から2030年までの干支を表示
-    print_eto_range(2024, 2030)
+# if __name__ == "__main__":
+#     # 2024年から2030年までの干支を表示
+#     print_eto_range(2024, 2030)
     
-    # 特定の年の干支を確認
-    calc = EtoCalculator()
-    year = 2025
-    eto, jikkan, junishi = calc.get_eto(year)
-    print(f"\n{year}年（令和{year-2018}年）の干支:")
-    print(f"干支: {eto}")
-    print(f"十干: {jikkan}")
-    print(f"十二支: {junishi}")
+#     # 特定の年の干支を確認
+#     calc = EtoCalculator()
+#     year = 2025
+#     eto, jikkan, junishi = calc.get_eto(year)
+#     print(f"\n{year}年（令和{year-2018}年）の干支:")
+#     print(f"干支: {eto}")
+#     print(f"十干: {jikkan}")
+#     print(f"十二支: {junishi}")
