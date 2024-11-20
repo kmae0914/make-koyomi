@@ -6,6 +6,7 @@ import pytz
 import pandas as pd
 from typing import List, Dict
 from nizyushiekki import SolarTermsCalculator
+from daily_rokuzikkanshi import DailyKanshiCalculator
 
 class JapaneseSeasonalDaysCalculator:
     def __init__(self):
@@ -95,30 +96,45 @@ class JapaneseSeasonalDaysCalculator:
         solar_terms = self.solar_terms_calculator.calculate_solar_terms(year)
         shanichi_dates = []
         
+        # DailyKanshiCalculatorのインスタンスを作成
+        kanshi_calc = DailyKanshiCalculator()
+        
         def find_nearest_tsuchinoe(base_date):
-            # 戊の日は60日周期の5番目、15番目、25番目、35番目、45番目、55番目
-            base_jd = (base_date - datetime(1873, 1, 1, tzinfo=pytz.UTC)).days
-            days_since_epoch = base_jd % 60
+            # 前後15日を探索
+            search_range = range(-15, 16)
+            tsuchinoe_dates = []
             
-            tsuchinoe_offsets = [5, 15, 25, 35, 45, 55]
-            nearest_offset = min(tsuchinoe_offsets, 
-                               key=lambda x: abs((days_since_epoch - x + 60) % 60))
+            for days in search_range:
+                target_date = base_date.date() + timedelta(days=days)
+                kanshi = kanshi_calc.get_kanshi(target_date)
+                
+                # 戊（つちのえ）の日を見つける（十干インデックスが4の日）
+                if kanshi['jikkan']['index'] == 4:
+                    tsuchinoe_dates.append(target_date)
             
-            adjustment = (nearest_offset - days_since_epoch + 60) % 60
-            if adjustment > 30:
-                adjustment -= 60
-            
-            return base_date + timedelta(days=adjustment)
+            # 基準日に最も近い戊の日を選択
+            if tsuchinoe_dates:
+                return min(tsuchinoe_dates, 
+                          key=lambda d: abs((d - base_date.date()).days))
+            return None
         
         for term in solar_terms:
             if term['term_name'] in ['春分', '秋分']:
                 season = '春' if term['term_name'] == '春分' else '秋'
                 shanichi_date = find_nearest_tsuchinoe(term['datetime_jst'])
-                shanichi_dates.append({
-                    '識別子': f"{year}{season}社日",
-                    '年月日時刻': shanichi_date.strftime('%Y/%m/%d %H:%M:%S'),
-                    'datetime_jst': shanichi_date
-                })
+                
+                if shanichi_date:
+                    # datetime型に変換（タイムゾーン付き）
+                    shanichi_datetime = datetime.combine(
+                        shanichi_date, 
+                        datetime.min.time()
+                    ).replace(tzinfo=self.tz_tokyo)
+                    
+                    shanichi_dates.append({
+                        '識別子': f"{year}{season}社日",
+                        '年月日時刻': shanichi_datetime.strftime('%Y/%m/%d %H:%M:%S'),
+                        'datetime_jst': shanichi_datetime
+                    })
         
         return shanichi_dates
     
@@ -129,36 +145,11 @@ class JapaneseSeasonalDaysCalculator:
         for term in solar_terms:
             if term['term_name'] == '立春':
                 base_date = term['datetime_jst']
-                hachijuhachi_ya = base_date + timedelta(days=88)
+                hachijuhachi_ya = base_date + timedelta(days=87)
                 return {
                     '識別子': f"{year}八十八夜",
                     '年月日時刻': hachijuhachi_ya.strftime('%Y/%m/%d %H:%M:%S'),
                     'datetime_jst': hachijuhachi_ya
-                }
-    
-    def calculate_nyubai(self, year: int) -> Dict:
-        """入梅 (芒種の日) を計算"""
-        solar_terms = self.solar_terms_calculator.calculate_solar_terms(year)
-        
-        for term in solar_terms:
-            if term['term_name'] == '芒種':
-                return {
-                    '識別子': f"{year}入梅",
-                    '年月日時刻': term['datetime_jst'].strftime('%Y/%m/%d %H:%M:%S'),
-                    'datetime_jst': term['datetime_jst']
-                }
-    
-    def calculate_hange(self, year: int) -> Dict:
-        """半夏生 (夏至から11日目) を計算"""
-        solar_terms = self.solar_terms_calculator.calculate_solar_terms(year)
-        
-        for term in solar_terms:
-            if term['term_name'] == '夏至':
-                hange = term['datetime_jst'] + timedelta(days=11)
-                return {
-                    '識別子': f"{year}半夏生",
-                    '年月日時刻': hange.strftime('%Y/%m/%d %H:%M:%S'),
-                    'datetime_jst': hange
                 }
     
     def calculate_nihyaku_toka(self, year: int) -> Dict:
@@ -167,26 +158,13 @@ class JapaneseSeasonalDaysCalculator:
         
         for term in solar_terms:
             if term['term_name'] == '立春':
-                nihyaku_toka = term['datetime_jst'] + timedelta(days=210)
+                nihyaku_toka = term['datetime_jst'] + timedelta(days=209)
                 return {
                     '識別子': f"{year}二百十日",
                     '年月日時刻': nihyaku_toka.strftime('%Y/%m/%d %H:%M:%S'),
                     'datetime_jst': nihyaku_toka
                 }
-    
-    def calculate_tanabata(self, year: int) -> List[Dict]:
-        """七夕 (新暦7月7日と旧暦7月7日) を計算"""
-        # 新暦七夕
-        modern_tanabata = datetime(year, 7, 7, tzinfo=self.tz_tokyo)
-        
-        # 注: 旧暦七夕の計算には旧暦変換が必要です
-        # ここでは新暦のみを実装しています
-        return [{
-            '識別子': f"{year}七夕",
-            '年月日時刻': modern_tanabata.strftime('%Y/%m/%d %H:%M:%S'),
-            'datetime_jst': modern_tanabata
-        }]
-    
+
     def get_all_seasonal_days(self, year: int) -> List[Dict]:
         """その年の全ての雑節を取得"""
         seasonal_days = []
@@ -196,10 +174,7 @@ class JapaneseSeasonalDaysCalculator:
         seasonal_days.extend(self.calculate_higan(year))
         seasonal_days.extend(self.calculate_shanichi(year))
         seasonal_days.append(self.calculate_hachijuhachi_ya(year))
-        seasonal_days.append(self.calculate_nyubai(year))
-        seasonal_days.append(self.calculate_hange(year))
         seasonal_days.append(self.calculate_nihyaku_toka(year))
-        seasonal_days.extend(self.calculate_tanabata(year))
         
         # None を除外し、日付でソート
         seasonal_days = [day for day in seasonal_days if day is not None]
@@ -285,5 +260,16 @@ class JapaneseSeasonalDaysCalculator:
 # デバッグ出力用
 if __name__ == "__main__":
     calculator = JapaneseSeasonalDaysCalculator()
+
+    # 二十四節気の表示を追加
+    for year in range(2024, 2026):
+        solar_terms = calculator.solar_terms_calculator.calculate_solar_terms(year)
+        print(f"\n=== {year}年の二十四節気 ===")
+        print(f"{'節気名':<10} {'年月日時刻':<30}")
+        print("-" * 50)
+        for term in solar_terms:
+            print(f"{term['term_name']:<10} {term['datetime_jst'].strftime('%Y/%m/%d %H:%M:%S'):<30}")
+        print("-" * 50)
+        print(f"総計: {len(solar_terms)}件の節気\n")
 
     calculator.print_seasonal_days(2024, 2025)

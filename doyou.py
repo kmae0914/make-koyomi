@@ -107,7 +107,7 @@ if __name__ == "__main__":
     calculator = DoyoCalculator()
     
     # 2024年のデータを表示
-    results_2024 = calculator.calculate_doyo_dates(2024)
+    results_2024 = calculator.calculate_doyo_dates(2025)
     for result in results_2024:
         print(f"{result['季節']}: {result['年月日時刻']}")
     
