@@ -1,17 +1,24 @@
 from koyomi.cycles.holiday import Holiday
 from datetime import date
 
-if __name__ == "__main__":
+def main():
     calculator = Holiday()
-
-    # 振替休日を含めて表示（デフォルト）
+    
+    # 2024年の祝日・休日を表示
+    print("【祝日・休日（振替休日含む）】")
     print(calculator.format_year(2024))
-
-    # 祝日のみ表示
+    
+    print("\n【祝日のみ】")
     print(calculator.format_year(2024, include_substitute=False))
+    
+    print("\n【振替休日・国民の休日の詳細】")
+    calculator.print_substitute_details(2024)
+    
+    # 2025年も同様に表示
+    print("\n" + "=" * 70)
+    print("【2025年】")
+    print(calculator.format_year(2025))
+    calculator.print_substitute_details(2025)
 
-    # 計算結果の詳細な情報を取得
-    results = calculator.calculate(2024)
-    for result in results:
-        if result['オリジナル祝日']:
-            print(f"{result['日付']}: {result['種類']} (元の祝日: {result['オリジナル祝日']})")
+if __name__ == "__main__":
+    main()

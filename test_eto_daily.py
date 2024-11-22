@@ -19,4 +19,7 @@ def test_monthly_first_days_eto():
             print(f"{date_str}  {result['干支']}    {result['読み']}    {result['通日']:2d}/60")
 
 if __name__ == "__main__":
-    test_monthly_first_days_eto()
+    # test_monthly_first_days_eto()
+    eto_data = DailyEto().calculate_year(2024)
+    for eto in eto_data:
+        print(f"{eto['日付']} {eto['干支']} {eto['読み']} {eto['通日']}")

@@ -1,4 +1,5 @@
 from typing import Dict, List, Optional
+import unicodedata
 from datetime import date, datetime, timedelta
 import calendar
 from ..core.calendar_base import CalendarBase
@@ -45,7 +46,7 @@ class Holiday(CalendarBase):
         """初期化"""
         super().__init__()
         self.sekki_calculator = SolarTerms()
-    
+
     def _find_monday_date(self, year: int, month: int, week: int) -> date:
         """指定された月の第n月曜日を求める"""
         c = calendar.monthcalendar(year, month)
@@ -65,22 +66,21 @@ class Holiday(CalendarBase):
                 return {
                     '日付': dt.date(),
                     '名称': holiday_name,
-                    '種類': '祝日'
+                    '種類': '祝日',
+                    'オリジナル祝日': None
                 }
         return None
-    
-    def calculate(self, year: int, include_substitute: bool = True) -> List[Dict]:
+
+    def calculate(self, year: int, **kwargs) -> List[Dict]:
         """
         指定された年の祝日と休日を計算
         
         Parameters:
             year (int): 年
-            include_substitute (bool): 振替休日を含めるかどうか。デフォルトはTrue
-            
-        Returns:
-            List[Dict]: 祝日・休日情報のリスト
-            各要素は {'日付': date, '名称': str, '種類': str, 'オリジナル祝日': Optional[str]}
+            **kwargs: 追加のオプション
+                include_substitute (bool): 振替休日を含めるかどうか。デフォルトはTrue
         """
+        include_substitute = kwargs.get('include_substitute', True)
         results = {}
         
         # 1. 固定日の祝日
@@ -107,12 +107,10 @@ class Holiday(CalendarBase):
         # 3. 春分・秋分
         spring = self._get_equinox_holiday(year, '春分', '春分の日')
         if spring:
-            spring['オリジナル祝日'] = None
             results[spring['日付']] = spring
         
         autumn = self._get_equinox_holiday(year, '秋分', '秋分の日')
         if autumn:
-            autumn['オリジナル祝日'] = None
             results[autumn['日付']] = autumn
         
         if include_substitute:
@@ -149,33 +147,58 @@ class Holiday(CalendarBase):
         
         # 日付順にソート
         sorted_results = [results[k] for k in sorted(results.keys())]
-        
         return sorted_results
+
+    def _get_text_width(self, text: str) -> int:
+        """文字列の表示幅を計算（全角文字は2、半角文字は1として計算）"""
+        width = 0
+        for c in text:
+            width += 2 if unicodedata.east_asian_width(c) in ('F', 'W', 'A') else 1
+        return width
     
+    def _format_column(self, text: str, width: int) -> str:
+        """文字列を指定した表示幅で整形"""
+        text_width = self._get_text_width(text)
+        padding = width - text_width
+        if padding > 0:
+            return text + " " * padding
+        return text
+
     def format_year(self, year: int, include_substitute: bool = True) -> str:
-        """
-        指定された年の祝日・休日を整形して文字列で返す
-        
-        Parameters:
-            year (int): 年
-            include_substitute (bool): 振替休日を含めるかどうか。デフォルトはTrue
-        
-        Returns:
-            str: 整形された祝日情報
-        """
-        results = self.calculate(year, include_substitute)
+        """指定された年の祝日・休日を整形して文字列で返す"""
+        results = self.calculate(year, include_substitute=include_substitute)
         
         output = [
             f"\n{year}年の{'祝日・休日' if include_substitute else '祝日'}",
-            "-" * 60,
-            "日付         名称           種類",
-            "-" * 60
+            "─" * 70,
+            f"{self._format_column('日付', 12)}  {self._format_column('名称', 14)}  種類",
+            "─" * 70
         ]
         
         for result in results:
             date_str = result['日付'].strftime('%Y/%m/%d')
             name = result['名称']
-            type_str = result['種類']
-            output.append(f"{date_str}  {name:<12} {type_str}")
+            display_type = result['種類']
+            
+            output.append(
+                f"{self._format_column(date_str, 12)}  "
+                f"{self._format_column(name, 14)}  "
+                f"{display_type}"
+            )
         
         return "\n".join(output)
+
+    def print_substitute_details(self, year: int) -> None:
+        """振替休日の詳細情報を表示"""
+        results = self.calculate(year, include_substitute=True)
+        
+        substitutes = [r for r in results if r['オリジナル祝日']]
+        if not substitutes:
+            print(f"\n{year}年の振替休日・国民の休日はありません。")
+            return
+        
+        print(f"\n{year}年の振替休日・国民の休日:")
+        print("─" * 70)
+        for holiday in substitutes:
+            date_str = holiday['日付'].strftime('%Y/%m/%d')
+            print(f"{date_str}: {holiday['種類']}")
