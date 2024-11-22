@@ -141,71 +141,70 @@ class CalendarExporter:
         return dfs
     
     @staticmethod
-    def create_monthly_events_df(monthly_info: List[Dict]) -> Dict[str, pd.DataFrame]:
+    def create_monthly_events_df(monthly_info: List[Dict], daily_events: Dict = None) -> Dict[str, pd.DataFrame]:
         """月別イベントをDataFrameに変換"""
+        dfs = {}
         all_sekki = []
         all_zassetsu = []
-        processed_events = set()  # 期間イベントの重複を防ぐ
+        processed_events = set()
         
-        # 月情報のDataFrame作成
-        monthly_data = []
-        for month, month_data in enumerate(monthly_info, 1):
-            monthly_data.append({
-                '月': f"{month}月",
-                '月初干支': month_data['月情報']['月初干支'],
-                '大小': month_data['月情報']['大小']
-            })
-        
-        dfs = {}
-        # 月情報のDataFrameを追加
-        dfs['月情報'] = pd.DataFrame(monthly_data)
-        
-        # 既存の節気・雑節の処理
+        # 既存の雑節処理
         for month_data in monthly_info:
-            # 節気
-            for sekki in month_data.get('節気', []):
-                dt = CalendarExporter._remove_timezone(sekki['datetime_jst'])
-                all_sekki.append({
-                    '日付': dt,
-                    '節気名': sekki['イベント名'],
-                })
-            
-            # 雑節
             for zassetsu in month_data.get('雑節', []):
                 dt = CalendarExporter._remove_timezone(zassetsu['datetime_jst'])
-                event_id = f"{zassetsu['識別子']}"
+                event_name = zassetsu['イベント名']
                 
-                # 期間イベントの処理（彼岸など）
-                if '彼岸' in event_id:
-                    base_id = event_id.replace('1日目', '').replace('2日目', '').\
-                                     replace('3日目', '').replace('4日目', '').\
-                                     replace('5日目', '').replace('6日目', '').\
-                                     replace('7日目', '')
-                    if base_id not in processed_events:
-                        processed_events.add(base_id)
+                if '彼岸' in event_name:
+                    # 既存の彼岸処理
+                    if event_name not in processed_events:
+                        processed_events.add(event_name)
                         all_zassetsu.append({
-                            '日付': dt,
-                            '雑節名': zassetsu['イベント名'].replace('1日目', '').strip(),
+                            '日付': dt.date(),
+                            '雑節名': event_name.replace('1日目', '').strip(),
+                            '備考': '期間：7日間'
                         })
-                # 社日の処理
-                elif '社日' in event_id:
-                    all_zassetsu.append({
-                        '日付': dt,
-                        '雑節名': zassetsu['イベント名'],
-                    })
-                # その他の雑節
                 else:
                     all_zassetsu.append({
-                        '日付': dt,
-                        '雑節名': zassetsu['イベント名'],
+                        '日付': dt.date(),
+                        '雑節名': event_name
                     })
         
-        if all_sekki:
-            dfs['節気'] = pd.DataFrame(all_sekki)
+        # 追加の雑節処理
+        if daily_events:
+            # 入梅
+            if '入梅' in daily_events:
+                event = daily_events['入梅'][0]
+                all_zassetsu.append({
+                    '日付': event['datetime_jst'].date(),
+                    '雑節名': '入梅'
+                })
+            
+            # 半夏生
+            if '半夏生' in daily_events:
+                event = daily_events['半夏生'][0]
+                all_zassetsu.append({
+                    '日付': event['datetime_jst'].date(),
+                    '雑節名': '半夏生'
+                })
+            
+            # 七夕
+            if '七夕' in daily_events:
+                for event in daily_events['七夕']:
+                    all_zassetsu.append({
+                        '日付': event['datetime_jst'].date(),
+                        '雑節名': event['イベント名'],
+                        '備考': '伝統的' if '伝統的' in event['イベント名'] else None
+                    })
+        
+        # DataFrameの作成と並び替え
         if all_zassetsu:
-            # 日付でソート
-            all_zassetsu.sort(key=lambda x: x['日付'])
-            dfs['雑節'] = pd.DataFrame(all_zassetsu)
+            df_zassetsu = pd.DataFrame(all_zassetsu)
+            df_zassetsu = df_zassetsu.sort_values('日付')
+            if not df_zassetsu['備考'].isna().all():
+                df_zassetsu = df_zassetsu[['日付', '雑節名', '備考']]
+            else:
+                df_zassetsu = df_zassetsu[['日付', '雑節名']]
+            dfs['雑節'] = df_zassetsu
         
         return dfs
 
@@ -297,7 +296,7 @@ class CalendarFileExporter:
         dfs.update(daily_dfs)
         
         # 月別イベントの追加
-        monthly_dfs = self.exporter.create_monthly_events_df(monthly_info)
+        monthly_dfs = self.exporter.create_monthly_events_df(monthly_info, daily_events)
         dfs.update(monthly_dfs)
         
         # ファイル出力

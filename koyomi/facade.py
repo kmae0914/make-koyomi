@@ -14,6 +14,9 @@ from .seasonal.zassetsu import Zassetsu
 from .seasonal.tanabata import Tanabata
 from .seasonal.doyo import Doyo
 from .utils.export import CalendarFileExporter
+from .seasonal.tsuyu import Tsuyuiri
+from .seasonal.hange import Hangesho
+from .seasonal.tanabata import Tanabata
 
 class KoyomiFacade:
     """暦計算機能のファサードクラス"""
@@ -113,6 +116,18 @@ class KoyomiFacade:
             '祝日': holidays,
             '日曜日': sundays,
         })
+        
+        # 入梅
+        tsuyuiri = Tsuyuiri()
+        events['入梅'] = [tsuyuiri.calculate(year)]
+        
+        # 半夏生
+        hangesho = Hangesho()
+        events['半夏生'] = [hangesho.calculate(year)]
+        
+        # 七夕（新暦・伝統的）
+        tanabata = Tanabata()
+        events['七夕'] = tanabata.calculate(year)
         
         return events  # 土用を含む全てのイベントを返す
     
